@@ -1,0 +1,6 @@
+{
+  "name": "Administrasi Pembelajaran",
+  "description": "Aplikasi administrasi guru untuk mengelola kalender pendidikan interaktif, analisis hari efektif belajar (HEB) dan kegiatan (HEK), sinkronisasi hari libur nasional, serta asisten kurikulum berbasis AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
