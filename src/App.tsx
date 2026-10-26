@@ -1,11 +1,29 @@
 import React, { useState, useMemo } from 'react';
-import { LayoutDashboard, Calendar, UserCheck, BookOpen, GraduationCap, Menu, X, HelpCircle, Edit3, Check } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Calendar, 
+  UserCheck, 
+  BookOpen, 
+  GraduationCap, 
+  Menu, 
+  X, 
+  HelpCircle, 
+  Edit3, 
+  Check, 
+  FileText, 
+  ClipboardList,
+  ChevronDown,
+  ChevronRight,
+  Sparkles
+} from 'lucide-react';
 import { CalendarDay } from './types';
 import { INDONESIAN_HOLIDAYS_2026, INDONESIAN_HOLIDAYS_2027, INDONESIAN_HOLIDAYS_2028 } from './data/holidays';
 
 import DashboardView from './components/DashboardView';
 import CalendarView from './components/CalendarView';
 import AttendanceView from './components/AttendanceView';
+import PerangkatPembelajaranView from './components/PerangkatPembelajaranView';
+import LkbView from './components/LkbView';
 
 // Generate default academic calendar state to make the application immediately alive
 function generateInitialCalendar(startYear: number): Record<string, CalendarDay> {
@@ -74,6 +92,91 @@ function generateInitialCalendar(startYear: number): Record<string, CalendarDay>
     }
   }
 
+  // --- Semester 2 (Genap) Academic & Examination Calendar for startYear + 1 ---
+  const nextYr = startYear + 1;
+
+  // January: Awal Masuk Semester Genap & HAB Kemenag
+  data[`${nextYr}-01-03`] = { dateString: `${nextYr}-01-03`, type: 'HEK', activityName: 'Hari Amal Bakti (HAB) Kemenag' };
+  data[`${nextYr}-01-05`] = { dateString: `${nextYr}-01-05`, type: 'HEK', activityName: 'Awal Masuk KBM Semester Genap' };
+
+  // March: Try Out Asesmen Madrasah (AM) Kelas VI
+  ['23', '24', '25', '26'].forEach(d => {
+    const ds = `${nextYr}-03-${d}`;
+    data[ds] = { dateString: ds, type: 'HEK', activityName: 'Try Out (TO) Asesmen Madrasah Kelas VI' };
+  });
+
+  // April: Ujian Praktik Kelas VI (Ibadah, BTQ, SBdP & PJOK)
+  ['13', '14', '15', '16', '17'].forEach(d => {
+    const ds = `${nextYr}-04-${d}`;
+    data[ds] = { dateString: ds, type: 'HEK', activityName: 'Ujian Praktik Kelas VI' };
+  });
+
+  // May: Asesmen Madrasah (AM) Utama Kelas VI
+  ['11', '12', '13', '14', '15', '16'].forEach(d => {
+    const ds = `${nextYr}-05-${d}`;
+    data[ds] = { dateString: ds, type: 'HEK', activityName: 'Asesmen Madrasah (AM) Kelas VI' };
+  });
+
+  // May: Ujian Susulan AM & Koreksi Naskah
+  ['18', '19'].forEach(d => {
+    const ds = `${nextYr}-05-${d}`;
+    data[ds] = { dateString: ds, type: 'HEK', activityName: 'Ujian Susulan AM & Koreksi Naskah' };
+  });
+
+  // May: Pengolahan Nilai & Rekap Leger
+  data[`${nextYr}-05-21`] = { dateString: `${nextYr}-05-21`, type: 'HEK', activityName: 'Pengolahan Nilai & Rekap Leger Kelulusan' };
+
+  // May: Rapat Pleno Penetapan Kelulusan Kelas VI
+  data[`${nextYr}-05-22`] = { dateString: `${nextYr}-05-22`, type: 'HEK', activityName: 'Rapat Pleno Dewan Guru Kelulusan Kelas VI' };
+
+  // June: Hari Lahir Pancasila
+  data[`${nextYr}-06-01`] = { dateString: `${nextYr}-06-01`, type: 'LIBUR_NASIONAL', activityName: 'Hari Lahir Pancasila' };
+
+  // June: Minggu Tenang & Persiapan Pelaksanaan PAT
+  ['02', '03', '04', '05'].forEach(d => {
+    const ds = `${nextYr}-06-${d}`;
+    const dateObj = new Date(nextYr, 5, parseInt(d, 10));
+    if (dateObj.getDay() !== 0 && dateObj.getDay() !== 6) {
+      data[ds] = { dateString: ds, type: 'HEK', activityName: 'Minggu Tenang & Persiapan Pelaksanaan PAT' };
+    }
+  });
+
+  // June: Penilaian Akhir Tahun (PAT) / ASAT Kelas I - V
+  ['08', '09', '10', '11', '12', '13'].forEach(d => {
+    const ds = `${nextYr}-06-${d}`;
+    data[ds] = { dateString: ds, type: 'HEK', activityName: 'Penilaian Akhir Tahun (PAT) / ASAT Kelas I - V' };
+  });
+
+  // June: Pengumuman Kelulusan & SKL Kelas VI
+  data[`${nextYr}-06-08`] = { dateString: `${nextYr}-06-08`, type: 'HEK', activityName: 'Pengumuman Kelulusan & Pembagian SKL Kelas VI' };
+
+  // June: Pengolahan Nilai RDM, Remedial & Penulisan Blangko Ijazah
+  ['14', '15', '16', '17', '18', '19'].forEach(d => {
+    const ds = `${nextYr}-06-${d}`;
+    data[ds] = { dateString: ds, type: 'HEK', activityName: 'Pengolahan Nilai RDM, Remedial & Penulisan Blangko Ijazah' };
+  });
+
+  // June: Pelepasan Siswa Kelas VI (Haflah Akhirussanah)
+  data[`${nextYr}-06-20`] = { dateString: `${nextYr}-06-20`, type: 'HEK', activityName: 'Pelepasan Siswa Kelas VI (Haflah Akhirussanah)' };
+
+  // June: Class Meeting / Porseni & Rapat Kenaikan Kelas
+  ['21', '22', '23', '24', '25'].forEach(d => {
+    const ds = `${nextYr}-06-${d}`;
+    data[ds] = { dateString: ds, type: 'HEK', activityName: 'Class Meeting & Rapat Pleno Kenaikan Kelas' };
+  });
+
+  // June: Pembagian Rapor Semester Genap Kelas I - V
+  data[`${nextYr}-06-26`] = { dateString: `${nextYr}-06-26`, type: 'HEK', activityName: 'Pembagian Buku Rapor Semester Genap' };
+
+  // June: Libur Akhir Tahun Pelajaran
+  for (let d = 27; d <= 30; d++) {
+    const ds = `${nextYr}-06-${String(d).padStart(2, '0')}`;
+    const dateObj = new Date(nextYr, 5, d);
+    if (dateObj.getDay() !== 0 && dateObj.getDay() !== 6 && data[ds]?.type !== 'LIBUR_NASIONAL') {
+      data[ds] = { dateString: ds, type: 'LIBUR_SEKOLAH', activityName: 'Libur Akhir Tahun Ajaran' };
+    }
+  }
+
   return data;
 }
 
@@ -128,6 +231,11 @@ export default function App() {
     return saved || '17 Juli 2026';
   });
 
+  const [schoolLogo, setSchoolLogo] = React.useState<string>(() => {
+    const saved = localStorage.getItem('school_calendar_logo');
+    return saved || '';
+  });
+
   const [isEditingSchool, setIsEditingSchool] = React.useState<boolean>(false);
   const [tempSchoolName, setTempSchoolName] = React.useState<string>('');
   
@@ -136,7 +244,18 @@ export default function App() {
     const saved = localStorage.getItem('school_calendar_data');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        const initial = generateInitialCalendar(2026);
+        const merged = { ...parsed };
+        let hasChanges = false;
+        Object.entries(initial).forEach(([k, v]) => {
+          if (v.activityName && (!merged[k] || !merged[k].activityName || (merged[k].type === 'HEB' && k.includes('-06-')))) {
+            merged[k] = v;
+            hasChanges = true;
+          }
+        });
+        if (hasChanges) return merged;
+        return parsed;
       } catch (e) {
         console.error('Failed to parse calendar data', e);
       }
@@ -188,7 +307,17 @@ export default function App() {
     localStorage.setItem('school_calendar_signature_date', signatureDate);
   }, [signatureDate]);
 
-  const [activeTab, setActiveTab] = React.useState<'dashboard' | 'calendar' | 'absen'>('dashboard');
+  React.useEffect(() => {
+    if (schoolLogo) {
+      localStorage.setItem('school_calendar_logo', schoolLogo);
+    } else {
+      localStorage.removeItem('school_calendar_logo');
+    }
+  }, [schoolLogo]);
+
+  const [activeTab, setActiveTab] = React.useState<'dashboard' | 'calendar' | 'absen' | 'perangkat' | 'lkb'>('dashboard');
+  const [perangkatSubTab, setPerangkatSubTab] = React.useState<'jadwal' | 'prota' | 'promes' | 'modul' | 'alokasi' | 'generate-soal'>('jadwal');
+  const [isPerangkatExpanded, setIsPerangkatExpanded] = React.useState<boolean>(true);
   const [isSidebarOpen, setIsSidebarOpen] = React.useState<boolean>(true);
 
   // Quick statistics for the main Sidebar branding
@@ -200,6 +329,8 @@ export default function App() {
     { id: 'dashboard', label: 'Menu Data', icon: LayoutDashboard, desc: 'Identitas & parameter sekolah' },
     { id: 'calendar', label: 'Kalender Pendidikan', icon: Calendar, desc: 'Atur hari efektif & libur' },
     { id: 'absen', label: 'Absen', icon: UserCheck, desc: 'Rekap & presensi siswa' },
+    { id: 'perangkat', label: 'Perangkat Pembelajaran', icon: FileText, desc: 'Modul & administrasi guru' },
+    { id: 'lkb', label: 'LKB', icon: ClipboardList, desc: 'Lembar Kerja Guru Bulanan' },
   ] as const;
 
   return (
@@ -233,7 +364,7 @@ export default function App() {
             {/* Mobile close sidebar button */}
             <button 
               onClick={() => setIsSidebarOpen(false)} 
-              className="md:hidden p-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300"
+              className="md:hidden p-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 cursor-pointer"
             >
               <X size={16} />
             </button>
@@ -263,29 +394,98 @@ export default function App() {
             {menuItems.map((item) => {
               const IconComp = item.icon;
               const isActive = activeTab === item.id;
+              const isPerangkat = item.id === 'perangkat';
+
               return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    // On small screen, auto close sidebar when item is clicked
-                    if (window.innerWidth < 768) setIsSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-200 text-left cursor-pointer
-                    ${isActive 
-                      ? 'bg-emerald-600 text-white font-semibold shadow-md' 
-                      : 'text-slate-400 hover:bg-slate-800/80 hover:text-slate-100'}`}
-                >
-                  <IconComp size={18} className="shrink-0" />
-                  {isSidebarOpen && (
-                    <div className="space-y-0.5">
-                      <span className="text-xs font-bold block">{item.label}</span>
-                      <span className={`text-[10px] block font-medium ${isActive ? 'text-emerald-100' : 'text-slate-500'}`}>
-                        {item.desc}
-                      </span>
+                <div key={item.id} className="space-y-1">
+                  <button
+                    onClick={() => {
+                      if (isPerangkat) {
+                        setActiveTab('perangkat');
+                        // If already active, toggle expansion; if switching to it, ensure expanded!
+                        if (activeTab === 'perangkat') {
+                          setIsPerangkatExpanded(prev => !prev);
+                        } else {
+                          setIsPerangkatExpanded(true);
+                        }
+                      } else {
+                        setActiveTab(item.id);
+                      }
+                      // On small screen, auto close sidebar when item is clicked (if not expanding perangkat)
+                      if (window.innerWidth < 768 && !isPerangkat) setIsSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 text-left cursor-pointer
+                      ${isActive 
+                        ? 'bg-emerald-600 text-white font-semibold shadow-md' 
+                        : 'text-slate-400 hover:bg-slate-800/80 hover:text-slate-100'}`}
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <IconComp size={18} className="shrink-0" />
+                      {isSidebarOpen && (
+                        <div className="space-y-0.5 min-w-0">
+                          <span className="text-xs font-bold block truncate">{item.label}</span>
+                          <span className={`text-[10px] block font-medium truncate ${isActive ? 'text-emerald-100' : 'text-slate-500'}`}>
+                            {item.desc}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Expand/Collapse Chevron indicator for Perangkat Pembelajaran */}
+                    {isPerangkat && isSidebarOpen && (
+                      <div 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsPerangkatExpanded(prev => !prev);
+                        }}
+                        className="p-1 hover:bg-white/10 rounded-md transition text-slate-300 ml-1 shrink-0"
+                        title={isPerangkatExpanded ? 'Tutup sub menu' : 'Buka sub menu'}
+                      >
+                        {isPerangkatExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      </div>
+                    )}
+                  </button>
+
+                  {/* Sub-menu di bawah Perangkat Pembelajaran */}
+                  {isPerangkat && isPerangkatExpanded && isSidebarOpen && (
+                    <div className="ml-5 pl-3 border-l-2 border-slate-700/70 py-1 space-y-1">
+                      <button
+                        onClick={() => {
+                          setActiveTab('perangkat');
+                          setPerangkatSubTab('jadwal');
+                          if (window.innerWidth < 768) setIsSidebarOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all duration-150 cursor-pointer ${
+                          activeTab === 'perangkat' && perangkatSubTab !== 'generate-soal'
+                            ? 'bg-emerald-500/15 text-emerald-300 font-bold border border-emerald-500/25'
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 font-medium'
+                        }`}
+                      >
+                        <FileText size={13} className={activeTab === 'perangkat' && perangkatSubTab !== 'generate-soal' ? 'text-emerald-400' : 'text-slate-500'} />
+                        <span className="text-[11px] truncate">Perangkat & Modul</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setActiveTab('perangkat');
+                          setPerangkatSubTab('generate-soal');
+                          if (window.innerWidth < 768) setIsSidebarOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all duration-150 cursor-pointer ${
+                          activeTab === 'perangkat' && perangkatSubTab === 'generate-soal'
+                            ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-xs'
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 font-medium'
+                        }`}
+                      >
+                        <Sparkles size={13} className={activeTab === 'perangkat' && perangkatSubTab === 'generate-soal' ? 'text-emerald-400 animate-pulse' : 'text-amber-400'} />
+                        <span className="text-[11px] truncate flex-1">Generate Soal</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          Sub Menu
+                        </span>
+                      </button>
                     </div>
                   )}
-                </button>
+                </div>
               );
             })}
           </nav>
@@ -345,7 +545,11 @@ export default function App() {
                 </div>
               ) : (
                 <h2 className="text-sm font-bold text-slate-700 flex items-center gap-1.5 mt-0.5 group">
-                  <BookOpen size={16} className="text-emerald-600" />
+                  {schoolLogo ? (
+                    <img src={schoolLogo} alt="Logo Sekolah" className="w-5 h-5 object-contain rounded shrink-0" />
+                  ) : (
+                    <BookOpen size={16} className="text-emerald-600" />
+                  )}
                   <span>{schoolName}</span>
                   <button
                     onClick={() => {
@@ -380,6 +584,8 @@ export default function App() {
               setSelectedYear={setSelectedYear}
               schoolName={schoolName}
               setSchoolName={setSchoolName}
+              schoolLogo={schoolLogo}
+              setSchoolLogo={setSchoolLogo}
               weeklyRestDays={weeklyRestDays}
               setWeeklyRestDays={setWeeklyRestDays}
               academicYears={academicYears}
@@ -410,6 +616,7 @@ export default function App() {
               weeklyRestDays={weeklyRestDays}
               setWeeklyRestDays={setWeeklyRestDays}
               schoolName={schoolName}
+              schoolLogo={schoolLogo}
               principalName={principalName}
               principalNip={principalNip}
               teacherName={teacherName}
@@ -424,6 +631,7 @@ export default function App() {
               calendarData={calendarData}
               selectedYear={selectedYear}
               schoolName={schoolName}
+              schoolLogo={schoolLogo}
               weeklyRestDays={weeklyRestDays}
               principalName={principalName}
               principalNip={principalNip}
@@ -431,6 +639,40 @@ export default function App() {
               teacherNip={teacherNip}
               signaturePlace={signaturePlace}
               signatureDate={signatureDate}
+            />
+          )}
+
+          {activeTab === 'perangkat' && (
+            <PerangkatPembelajaranView 
+              schoolName={schoolName}
+              schoolLogo={schoolLogo}
+              principalName={principalName}
+              principalNip={principalNip}
+              teacherName={teacherName}
+              teacherNip={teacherNip}
+              signaturePlace={signaturePlace}
+              signatureDate={signatureDate}
+              calendarData={calendarData}
+              selectedYear={selectedYear}
+              weeklyRestDays={weeklyRestDays}
+              initialSubTab={perangkatSubTab}
+              onSubTabChange={(tab) => setPerangkatSubTab(tab)}
+            />
+          )}
+
+          {activeTab === 'lkb' && (
+            <LkbView 
+              schoolName={schoolName}
+              schoolLogo={schoolLogo}
+              principalName={principalName}
+              principalNip={principalNip}
+              teacherName={teacherName}
+              teacherNip={teacherNip}
+              signaturePlace={signaturePlace}
+              signatureDate={signatureDate}
+              calendarData={calendarData}
+              selectedYear={selectedYear}
+              weeklyRestDays={weeklyRestDays}
             />
           )}
         </main>

@@ -34,6 +34,7 @@ interface CalendarViewProps {
   weeklyRestDays: number[];
   setWeeklyRestDays: React.Dispatch<React.SetStateAction<number[]>>;
   schoolName: string;
+  schoolLogo?: string;
   principalName: string;
   principalNip: string;
   teacherName: string;
@@ -63,6 +64,7 @@ export default function CalendarView({
   weeklyRestDays,
   setWeeklyRestDays,
   schoolName,
+  schoolLogo,
   principalName,
   principalNip,
   teacherName,

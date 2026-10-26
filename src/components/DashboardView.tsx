@@ -36,6 +36,8 @@ interface DashboardViewProps {
   setSelectedYear: (year: number) => void;
   schoolName: string;
   setSchoolName: (name: string) => void;
+  schoolLogo?: string;
+  setSchoolLogo?: (logo: string) => void;
   weeklyRestDays: number[];
   setWeeklyRestDays: (days: number[]) => void;
   academicYears: number[];
@@ -61,6 +63,8 @@ export default function DashboardView({
   setSelectedYear,
   schoolName,
   setSchoolName,
+  schoolLogo = '',
+  setSchoolLogo,
   weeklyRestDays,
   setWeeklyRestDays,
   academicYears,
@@ -85,6 +89,7 @@ export default function DashboardView({
 
   // Form draft states for School Identity
   const [draftSchoolName, setDraftSchoolName] = useState(schoolName);
+  const [draftSchoolLogo, setDraftSchoolLogo] = useState(schoolLogo);
   const [draftSelectedYear, setDraftSelectedYear] = useState(selectedYear);
   const [draftPrincipalName, setDraftPrincipalName] = useState(principalName);
   const [draftPrincipalNip, setDraftPrincipalNip] = useState(principalNip);
@@ -144,6 +149,7 @@ export default function DashboardView({
 
   const handleOpenForm = () => {
     setDraftSchoolName(schoolName);
+    setDraftSchoolLogo(schoolLogo);
     setDraftSelectedYear(selectedYear);
     setDraftPrincipalName(principalName);
     setDraftPrincipalNip(principalNip);
@@ -154,9 +160,28 @@ export default function DashboardView({
     setIsFormOpen(true);
   };
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 3 * 1024 * 1024) {
+        alert('Ukuran file logo terlalu besar. Maksimal 3MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        if (base64) {
+          setDraftSchoolLogo(base64);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveForm = (e: React.FormEvent) => {
     e.preventDefault();
     setSchoolName(draftSchoolName);
+    if (setSchoolLogo) setSchoolLogo(draftSchoolLogo);
     setSelectedYear(draftSelectedYear);
     setPrincipalName(draftPrincipalName);
     setPrincipalNip(draftPrincipalNip);
@@ -297,6 +322,7 @@ export default function DashboardView({
   const handleExportData = () => {
     const dataStr = JSON.stringify({
       schoolName,
+      schoolLogo,
       selectedYear,
       weeklyRestDays,
       academicYears,
@@ -330,6 +356,7 @@ export default function DashboardView({
           const parsed = JSON.parse(event.target?.result as string);
           if (parsed && parsed.calendarData) {
             if (parsed.schoolName) setSchoolName(parsed.schoolName);
+            if (parsed.schoolLogo && setSchoolLogo) setSchoolLogo(parsed.schoolLogo);
             if (parsed.selectedYear) setSelectedYear(parsed.selectedYear);
             if (parsed.weeklyRestDays) setWeeklyRestDays(parsed.weeklyRestDays);
             if (parsed.academicYears) setAcademicYears(parsed.academicYears);
@@ -549,6 +576,43 @@ export default function DashboardView({
                           className="w-full bg-white border border-slate-200 rounded-lg text-xs font-semibold px-3 py-2 text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                           placeholder="Masukkan nama sekolah..."
                         />
+                      </div>
+
+                      {/* Logo Upload Field */}
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wide mb-1">
+                          Logo Sekolah / Madrasah
+                        </label>
+                        <div className="flex items-center gap-3 bg-white p-2.5 rounded-lg border border-slate-200">
+                          <div className="w-12 h-12 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
+                            {draftSchoolLogo ? (
+                              <img src={draftSchoolLogo} alt="Logo Sekolah" className="w-full h-full object-contain p-0.5" />
+                            ) : (
+                              <Upload size={18} className="text-slate-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-md text-[11px] font-bold cursor-pointer transition">
+                              <Upload size={12} />
+                              <span>{draftSchoolLogo ? 'Ganti Logo' : 'Upload Logo'}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleLogoUpload}
+                                className="hidden"
+                              />
+                            </label>
+                            {draftSchoolLogo && (
+                              <button
+                                type="button"
+                                onClick={() => setDraftSchoolLogo('')}
+                                className="block text-[10px] text-rose-600 hover:underline font-semibold"
+                              >
+                                Hapus Logo
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
                       <div>

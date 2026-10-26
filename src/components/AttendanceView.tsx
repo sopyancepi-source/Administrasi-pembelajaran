@@ -11,7 +11,10 @@ import {
   FileSpreadsheet,
   Edit3,
   Save,
-  RotateCcw
+  RotateCcw,
+  FileText,
+  X,
+  BookOpen
 } from 'lucide-react';
 import { CalendarDay, DayType } from '../types';
 import { ClassLevel, ALL_CLASSES, StudentItem, StudentsDataMap } from './DashboardView';
@@ -20,6 +23,7 @@ interface AttendanceViewProps {
   calendarData: Record<string, CalendarDay>;
   selectedYear: number;
   schoolName: string;
+  schoolLogo?: string;
   weeklyRestDays: number[];
   principalName: string;
   principalNip: string;
@@ -43,6 +47,7 @@ export default function AttendanceView({
   calendarData,
   selectedYear,
   schoolName,
+  schoolLogo,
   weeklyRestDays,
   principalName,
   principalNip,
@@ -78,6 +83,26 @@ export default function AttendanceView({
   const [pageSize, setPageSize] = useState<'A4' | 'F4' | 'Letter' | 'Legal'>('A4');
   const [paperOrientation, setPaperOrientation] = useState<'landscape' | 'portrait'>('landscape');
   const [paperMargin, setPaperMargin] = useState<'5mm' | '10mm' | '15mm'>('10mm');
+
+  // Active Print Document & Cover Modal States
+  const [activePrintDoc, setActivePrintDoc] = useState<'attendance' | 'cover'>('attendance');
+  const [showCoverModal, setShowCoverModal] = useState<boolean>(false);
+
+  // Cover custom options
+  const [coverTitle, setCoverTitle] = useState<string>(`ABSENSI ${selectedClass.toUpperCase()}`);
+  const [coverSubTitle, setCoverSubTitle] = useState<string>(`TAHUN PELAJARAN ${selectedYear} / ${selectedYear + 1}`);
+  const [coverOrientation, setCoverOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [coverPageSize, setCoverPageSize] = useState<'A4' | 'F4' | 'Letter' | 'Legal'>('A4');
+  const [coverMargin, setCoverMargin] = useState<'10mm' | '15mm' | '20mm'>('15mm');
+
+  // Keep coverTitle and coverSubTitle updated when selectedClass or selectedYear changes
+  useEffect(() => {
+    setCoverTitle(`ABSENSI ${selectedClass.toUpperCase()}`);
+  }, [selectedClass]);
+
+  useEffect(() => {
+    setCoverSubTitle(`TAHUN PELAJARAN ${selectedYear} / ${selectedYear + 1}`);
+  }, [selectedYear]);
 
   // Load students data from localStorage
   const [studentsDataMap, setStudentsDataMap] = useState<StudentsDataMap>(() => {
@@ -166,6 +191,22 @@ export default function AttendanceView({
       activityName: isRest ? 'Libur Akhir Pekan' : ''
     };
   };
+
+  // Calculate titi mangsa (last effective non-holiday day of the current month)
+  const calculatedTitiMangsaDate = useMemo(() => {
+    const indonesianMonths = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    for (let day = daysInMonth; day >= 1; day--) {
+      const info = getDayKalpenInfo(day);
+      const isHoliday = info.type === 'WEEKEND' || info.type.startsWith('LIBUR');
+      if (!isHoliday) {
+        return `${day} ${indonesianMonths[currentMonth.index]} ${currentMonth.year}`;
+      }
+    }
+    return `${daysInMonth} ${indonesianMonths[currentMonth.index]} ${currentMonth.year}`;
+  }, [daysInMonth, currentMonth, calendarData, weeklyRestDays]);
 
   // List of students for selected class (with padding to at least 15 rows for clean print layout)
   const activeStudents = useMemo(() => {
@@ -319,9 +360,19 @@ export default function AttendanceView({
     return list;
   }, [daysList, currentMonth, calendarData, weeklyRestDays]);
 
-  // Print Action
-  const handlePrint = () => {
-    window.print();
+  // Print Actions
+  const handlePrintAttendance = () => {
+    setActivePrintDoc('attendance');
+    setTimeout(() => {
+      window.print();
+    }, 120);
+  };
+
+  const handlePrintCover = () => {
+    setActivePrintDoc('cover');
+    setTimeout(() => {
+      window.print();
+    }, 120);
   };
 
   // Helper for background color classes based on day type
@@ -362,6 +413,12 @@ export default function AttendanceView({
       {/* PRINT STYLING injected into DOM */}
       <style>{`
         @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
           /* Hide non-printable UI components */
           #sidebar-navigation,
           header,
@@ -383,12 +440,40 @@ export default function AttendanceView({
             margin: 0 !important;
           }
 
-          #printable-attendance-sheet {
-            border: none !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-            width: 100% !important;
-          }
+          ${activePrintDoc === 'cover' ? `
+            #printable-attendance-sheet {
+              display: none !important;
+            }
+            #printable-cover-sheet {
+              display: flex !important;
+              border: 3px double #0f172a !important;
+              box-shadow: none !important;
+              width: 100% !important;
+              height: 100% !important;
+              padding: 20mm 15mm !important;
+              margin: 0 !important;
+              box-sizing: border-box !important;
+            }
+            @page {
+              size: ${coverPageSize === 'F4' ? '215mm 330mm' : coverPageSize} ${coverOrientation};
+              margin: ${coverMargin};
+            }
+          ` : `
+            #printable-cover-sheet {
+              display: none !important;
+            }
+            #printable-attendance-sheet {
+              display: block !important;
+              border: none !important;
+              box-shadow: none !important;
+              padding: 0 !important;
+              width: 100% !important;
+            }
+            @page {
+              size: ${pageSize === 'F4' ? '215mm 330mm' : pageSize} ${paperOrientation};
+              margin: ${paperMargin};
+            }
+          `}
 
           table {
             border-collapse: collapse !important;
@@ -403,48 +488,31 @@ export default function AttendanceView({
           .print-bg-red {
             background-color: #ef4444 !important;
             color: white !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
           }
 
           .print-bg-red-light {
             background-color: #fca5a5 !important;
             color: #7f1d1d !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
           }
 
           .print-bg-rose {
             background-color: #f43f5e !important;
             color: white !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
           }
 
           .print-bg-rose-light {
             background-color: #fecdd3 !important;
             color: #881337 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
           }
 
           .print-bg-weekend {
             background-color: #fecdd3 !important;
             color: #881337 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
           }
 
           .print-bg-amber {
             background-color: #fde047 !important;
             color: #0f172a !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-
-          @page {
-            size: ${pageSize === 'F4' ? '215mm 330mm' : pageSize} ${paperOrientation};
-            margin: ${paperMargin};
           }
         }
       `}</style>
@@ -465,10 +533,17 @@ export default function AttendanceView({
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full lg:w-auto">
+          <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
             <button
-              onClick={handlePrint}
-              className="flex-1 lg:flex-initial flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-xs transition cursor-pointer"
+              onClick={() => setShowCoverModal(true)}
+              className="flex-1 lg:flex-initial flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition cursor-pointer"
+            >
+              <FileText size={16} />
+              Cetak Cover Absen
+            </button>
+            <button
+              onClick={handlePrintAttendance}
+              className="flex-1 lg:flex-initial flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition cursor-pointer"
             >
               <Printer size={16} />
               Cetak Format Absen
@@ -594,18 +669,35 @@ export default function AttendanceView({
             </div>
           </div>
         </div>
+
+        {/* PRINT PDF TIP NOTICE */}
+        <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-3 text-xs text-amber-900 flex items-start gap-2.5">
+          <span className="text-amber-600 font-bold text-sm shrink-0 mt-0.5">💡</span>
+          <div className="space-y-0.5">
+            <p className="font-bold text-amber-950">Petunjuk PENTING saat Simpan ke PDF di Browser Chrome / Edge:</p>
+            <ul className="list-disc list-inside text-[11px] text-amber-800 space-y-0.5 font-medium">
+              <li><strong className="text-amber-950">Hilangkan centang "Headers and footers" (Header dan footer)</strong> di menu Options sebelah kanan agar jam/tanggal (seperti 8/4/26, 9:44 AM) & URL di bagian atas/bawah kertas hilang.</li>
+              <li>Wajib centang <strong className="text-amber-950">"Background graphics" (Grafik latar belakang)</strong> pada menu Options/Opsi di sebelah kanan agar warna libur nasional (merah/kuning) tidak berubah jadi putih.</li>
+              <li>Saat mengeklik <strong className="text-amber-950">Save / Simpan</strong>, browser membuka jendela folder Windows untuk memilih tempat penyimpanan file PDF. Jika merasa tidak ada respon, periksa taskbar bawah atau geser jendela browser karena jendela folder pilihan simpan biasanya terbuka di belakang browser.</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       {/* PRINTABLE ATTENDANCE SHEET SHEET CONTAINER */}
       <div 
         id="printable-attendance-sheet"
-        className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-md space-y-5 text-slate-900 font-sans"
+        className={`bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-md space-y-5 text-slate-900 font-sans ${
+          activePrintDoc === 'attendance' ? '' : 'hidden no-print'
+        }`}
       >
         {/* HEADER TITLE & METADATA (MATCHING THE IMAGE FORMAT EXACTLY) */}
         <div className="space-y-3">
-          <h2 className="text-xl font-extrabold uppercase tracking-wide text-slate-900">
-            ABSENSI
-          </h2>
+          <div>
+            <h2 className="text-xl font-extrabold uppercase tracking-wide text-slate-900">
+              ABSENSI
+            </h2>
+          </div>
 
           <div className="grid grid-cols-2 text-xs font-bold text-slate-800 gap-y-1">
             <div className="space-y-1">
@@ -770,11 +862,11 @@ export default function AttendanceView({
         {/* KETERANGAN SECTION (EXTRACTED FROM KALENDER PENDIDIKAN) */}
         <div className="pt-2 space-y-4">
           <div className="border-t border-slate-200 pt-3">
-            <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider mb-2">
+            <h4 className="text-xs font-bold uppercase text-slate-800 tracking-wider mb-2">
               KETERANGAN :
             </h4>
 
-            <div className="bg-slate-50/80 p-3 rounded-lg border border-slate-200 text-xs space-y-1.5">
+            <div className="bg-slate-50/80 p-3 rounded-lg border border-slate-200 text-xs space-y-1.5 font-normal">
               {monthKeteranganList.length === 0 ? (
                 <div className="text-slate-500 italic">
                   - Tidak ada agenda libur nasional atau kegiatan khusus pada bulan ini (Hari Efektif Belajar Biasa).
@@ -782,10 +874,10 @@ export default function AttendanceView({
               ) : (
                 monthKeteranganList.map((item, idx) => (
                   <div key={idx} className="flex items-start gap-2">
-                    <span className="font-bold text-slate-700 min-w-[130px]">
+                    <span className="font-normal text-slate-700 min-w-[130px]">
                       {item.days} :
                     </span>
-                    <span className={`font-semibold ${item.type === 'LIBUR_NASIONAL' || item.type === 'LIBUR_SEKOLAH' ? 'text-red-700' : 'text-slate-800'}`}>
+                    <span className={`font-normal ${item.type === 'LIBUR_NASIONAL' || item.type === 'LIBUR_SEKOLAH' ? 'text-red-700 font-normal' : 'text-slate-800 font-normal'}`}>
                       {item.title} {item.type === 'LIBUR_NASIONAL' ? '(Libur Nasional)' : item.type === 'LIBUR_SEKOLAH' ? '(Libur Sekolah)' : ''}
                     </span>
                   </div>
@@ -794,60 +886,329 @@ export default function AttendanceView({
 
               {/* Default Weekly Rest Note */}
               <div className="flex items-start gap-2 pt-1 border-t border-slate-200/60 text-slate-600">
-                <span className="font-bold min-w-[130px]">Setiap Hari Minggu :</span>
-                <span>Libur Akhir Pekan</span>
+                <span className="font-normal min-w-[130px]">Setiap Hari Minggu :</span>
+                <span className="font-normal">Libur Akhir Pekan</span>
               </div>
             </div>
           </div>
 
-          {/* BOTTOM PERCENTAGE STATS & SIGNATURES (MATCHING THE IMAGE) */}
-          <div className="grid grid-cols-3 items-end pt-4 text-xs">
+          {/* BOTTOM PERCENTAGE STATS & SIGNATURES */}
+          <div className="grid grid-cols-3 items-start pt-6 text-xs">
             {/* LEFT SIGNATURE: KEPALA MADRASAH / SEKOLAH */}
-            <div className="space-y-1 text-left">
-              <div>Mengetahui;</div>
-              <div className="font-bold">Kepala Madrasah / Sekolah</div>
-              <div className="h-16" /> {/* Signature whitespace */}
-              <div className="font-black text-slate-900 border-b border-slate-900 inline-block min-w-[140px]">
-                {principalName || '...........................................'}
+            <div className="text-left flex flex-col justify-between min-h-[140px]">
+              <div>
+                <div>Mengetahui,</div>
+                <div className="font-bold mt-0.5">Kepala Madrasah / Sekolah</div>
               </div>
-              <div className="text-[11px] font-semibold text-slate-700">
-                NIP. {principalNip || '...................................'}
+              <div>
+                <div className="font-black text-slate-900 border-b border-slate-900 inline-block min-w-[160px] pb-0.5">
+                  {principalName || '...........................................'}
+                </div>
+                <div className="text-[11px] font-semibold text-slate-700 mt-0.5">
+                  NIP. {principalNip || '...................................'}
+                </div>
               </div>
             </div>
 
-            {/* CENTER STATS PERCENTAGE (MATCHING IMAGE FORMAT) */}
-            <div className="space-y-1 text-center font-semibold text-slate-800">
-              <div className="grid grid-cols-2 gap-x-2 text-left max-w-[160px] mx-auto">
-                <span>Sakit :</span>
-                <span className="font-mono text-right">{classSummary.sakitPct}%</span>
-              </div>
-              <div className="grid grid-cols-2 gap-x-2 text-left max-w-[160px] mx-auto">
-                <span>Izin :</span>
-                <span className="font-mono text-right">{classSummary.izinPct}%</span>
-              </div>
-              <div className="grid grid-cols-2 gap-x-2 text-left max-w-[160px] mx-auto">
-                <span>Alpa :</span>
-                <span className="font-mono text-right">{classSummary.alpaPct}%</span>
+            {/* CENTER STATS PERCENTAGE */}
+            <div className="text-center font-semibold text-slate-800 flex flex-col justify-end min-h-[140px] pb-1">
+              <div className="space-y-1">
+                <div className="grid grid-cols-2 gap-x-2 text-left max-w-[160px] mx-auto">
+                  <span>Sakit :</span>
+                  <span className="font-mono text-right">
+                    {Number(classSummary.sakitPct) > 0 ? `${classSummary.sakitPct}%` : '.............%'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-2 text-left max-w-[160px] mx-auto">
+                  <span>Izin :</span>
+                  <span className="font-mono text-right">
+                    {Number(classSummary.izinPct) > 0 ? `${classSummary.izinPct}%` : '.............%'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-2 text-left max-w-[160px] mx-auto">
+                  <span>Alpa :</span>
+                  <span className="font-mono text-right">
+                    {Number(classSummary.alpaPct) > 0 ? `${classSummary.alpaPct}%` : '.............%'}
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* RIGHT SIGNATURE: GURU KELAS */}
-            <div className="space-y-1 text-right">
+            <div className="text-left flex flex-col justify-between min-h-[140px] ml-auto">
               <div>
-                {signaturePlace || 'Cipeundeuy'}, {signatureDate || '.......................'}
+                <div>
+                  {signaturePlace || 'Cipeundeuy'}, {calculatedTitiMangsaDate}
+                </div>
+                <div className="font-bold mt-0.5">Guru Kelas</div>
               </div>
-              <div className="font-bold">Guru Kelas</div>
-              <div className="h-16" /> {/* Signature whitespace */}
-              <div className="font-black text-slate-900 border-b border-slate-900 inline-block min-w-[140px]">
-                {teacherName || '...........................................'}
-              </div>
-              <div className="text-[11px] font-semibold text-slate-700">
-                NIP. {teacherNip || '...................................'}
+              <div>
+                <div className="font-black text-slate-900 border-b border-slate-900 inline-block min-w-[160px] pb-0.5">
+                  {teacherName || '...........................................'}
+                </div>
+                <div className="text-[11px] font-semibold text-slate-700 mt-0.5">
+                  NIP. {teacherNip || '...................................'}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* PRINTABLE COVER SHEET CONTAINER */}
+      <div 
+        id="printable-cover-sheet"
+        className={`bg-white rounded-2xl border-4 border-double border-slate-900 p-8 sm:p-14 text-slate-900 font-sans flex flex-col justify-between items-center text-center ${
+          coverOrientation === 'landscape' ? 'min-h-[560px] max-w-[900px]' : 'min-h-[820px] max-w-[680px]'
+        } mx-auto shadow-md ${activePrintDoc === 'cover' ? 'block' : 'hidden no-print'}`}
+      >
+        {/* TOP TITLE SECTION */}
+        <div className="w-full space-y-3 pt-4">
+          <div className="border-b-2 border-slate-900 pb-4">
+            <h1 className="text-2xl sm:text-4xl font-black uppercase tracking-wider text-slate-900">
+              {coverTitle || `ABSENSI ${selectedClass.toUpperCase()}`}
+            </h1>
+            <p className="text-lg sm:text-2xl font-extrabold text-slate-800 uppercase tracking-wide mt-2">
+              {coverSubTitle || `TAHUN PELAJARAN ${selectedYear} / ${selectedYear + 1}`}
+            </p>
+          </div>
+        </div>
+
+        {/* CENTER LOGO SECTION */}
+        <div className="my-8 flex flex-col items-center justify-center space-y-4">
+          {schoolLogo ? (
+            <img
+              src={schoolLogo}
+              alt="Logo Sekolah"
+              className={`${
+                coverOrientation === 'landscape' ? 'w-44 h-44 max-h-48' : 'w-56 h-56 max-h-64'
+              } object-contain filter drop-shadow-sm`}
+            />
+          ) : (
+            <div className="w-48 h-48 rounded-full border-4 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center p-4 text-slate-400 space-y-2">
+              <BookOpen size={52} className="text-emerald-600" />
+              <span className="text-xs font-bold text-slate-500 text-center">
+                Logo Sekolah Belum Ada<br />
+                <span className="text-[10px] text-slate-400 font-normal">(Upload di menu Data)</span>
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* BOTTOM SCHOOL NAME SECTION */}
+        <div className="w-full space-y-4 pb-4">
+          <div className="border-t-2 border-slate-900 pt-4">
+            <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-slate-900">
+              {schoolName ? schoolName.toUpperCase() : 'NAMA SEKOLAH / MADRASAH'}
+            </h2>
+
+            {/* Sub-footer details */}
+            <div className="mt-8 pt-4 border-t border-slate-300 flex justify-between items-end text-xs font-bold text-slate-800">
+              <div className="text-left space-y-0.5">
+                <p className="text-slate-500 uppercase text-[10px]">Wali / Guru Kelas:</p>
+                <p className="font-extrabold">{teacherName || '...........................................'}</p>
+                {teacherNip && <p className="text-slate-600 text-[11px]">NIP. {teacherNip}</p>}
+              </div>
+
+              <div className="text-right space-y-0.5">
+                <p className="text-slate-500 uppercase text-[10px]">Kepala Sekolah / Madrasah:</p>
+                <p className="font-extrabold">{principalName || '...........................................'}</p>
+                {principalNip && <p className="text-slate-600 text-[11px]">NIP. {principalNip}</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* COVER ABSEN PRINT PREVIEW MODAL */}
+      {showCoverModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 no-print overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-4xl w-full max-h-[90vh] flex flex-col my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                  <FileText size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-800">
+                    Cetak Sampul / Cover Absen
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Atur format &amp; orientasi kertas untuk cetak cover absensi kelas
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCoverModal(false)}
+                className="w-8 h-8 rounded-lg hover:bg-slate-200/80 text-slate-500 flex items-center justify-center transition cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              {/* Form Controls Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+                {/* 1. Judul Cover */}
+                <div className="space-y-1 md:col-span-2">
+                  <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wide">
+                    Judul Cover Absen:
+                  </label>
+                  <input
+                    type="text"
+                    value={coverTitle}
+                    onChange={(e) => setCoverTitle(e.target.value)}
+                    placeholder="Contoh: ABSENSI KELAS 6"
+                    className="w-full bg-white border border-slate-300 text-xs font-bold text-slate-800 px-3.5 py-2 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* 2. Sub-judul / Tahun Pelajaran */}
+                <div className="space-y-1 md:col-span-2">
+                  <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wide">
+                    Sub-Judul / Tahun Pelajaran:
+                  </label>
+                  <input
+                    type="text"
+                    value={coverSubTitle}
+                    onChange={(e) => setCoverSubTitle(e.target.value)}
+                    placeholder="Contoh: TAHUN PELAJARAN 2026 / 2027"
+                    className="w-full bg-white border border-slate-300 text-xs font-bold text-slate-800 px-3.5 py-2 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* 3. Orientasi Kertas */}
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wide">
+                    Orientasi Kertas:
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCoverOrientation('portrait')}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 cursor-pointer transition ${
+                        coverOrientation === 'portrait'
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>Potret (Tegak)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCoverOrientation('landscape')}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 cursor-pointer transition ${
+                        coverOrientation === 'landscape'
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>Lanskap (Mendatar)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. Ukuran Kertas */}
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wide">
+                    Ukuran Kertas:
+                  </label>
+                  <select
+                    value={coverPageSize}
+                    onChange={(e) => setCoverPageSize(e.target.value as any)}
+                    className="w-full bg-white border border-slate-300 text-xs font-bold text-slate-800 px-3 py-2 rounded-xl focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    <option value="A4">A4 (210 × 297 mm)</option>
+                    <option value="F4">F4 / Folio (215 × 330 mm)</option>
+                    <option value="Letter">Letter (216 × 279 mm)</option>
+                    <option value="Legal">Legal (216 × 356 mm)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Cover Live Visual Preview */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                  <span>Pratinjau Sampul (Preview):</span>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Format: {coverOrientation === 'landscape' ? 'Lanskap (Mendatar)' : 'Potret (Tegak)'} - Ukuran {coverPageSize}
+                  </span>
+                </div>
+
+                <div className="bg-slate-200/70 p-6 rounded-xl overflow-x-auto flex justify-center">
+                  <div
+                    className={`bg-white rounded-lg border-2 border-double border-slate-900 p-6 text-slate-900 flex flex-col justify-between items-center text-center shadow-lg transition-all duration-200 ${
+                      coverOrientation === 'landscape' ? 'w-[520px] h-[340px]' : 'w-[360px] h-[480px]'
+                    }`}
+                  >
+                    {/* Top Title Preview */}
+                    <div className="w-full space-y-1 pt-1">
+                      <div className="border-b border-slate-900 pb-2">
+                        <h4 className="text-sm font-black uppercase tracking-wider text-slate-900">
+                          {coverTitle || `ABSENSI ${selectedClass.toUpperCase()}`}
+                        </h4>
+                        <p className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wide mt-0.5">
+                          {coverSubTitle || `TAHUN PELAJARAN ${selectedYear} / ${selectedYear + 1}`}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Center Logo Preview */}
+                    <div className="my-2 flex flex-col items-center justify-center">
+                      {schoolLogo ? (
+                        <img
+                          src={schoolLogo}
+                          alt="Logo Sekolah"
+                          className={`${
+                            coverOrientation === 'landscape' ? 'w-24 h-24' : 'w-32 h-32'
+                          } object-contain`}
+                        />
+                      ) : (
+                        <div className="w-24 h-24 rounded-full border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center p-2 text-slate-400">
+                          <BookOpen size={28} className="text-emerald-600" />
+                          <span className="text-[9px] font-bold text-slate-500 text-center mt-1">
+                            Belum Ada Logo
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bottom School Name Preview */}
+                    <div className="w-full space-y-1 pb-1">
+                      <div className="border-t border-slate-900 pt-2">
+                        <h5 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                          {schoolName ? schoolName.toUpperCase() : 'NAMA SEKOLAH / MADRASAH'}
+                        </h5>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setShowCoverModal(false)}
+                className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+              >
+                Batal / Tutup
+              </button>
+              <button
+                type="button"
+                onClick={handlePrintCover}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <Printer size={15} />
+                <span>Cetak Cover Sekarang</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
